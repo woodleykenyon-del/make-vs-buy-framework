@@ -1,0 +1,12 @@
+# Pin the app to a light theme in the suite's design system so it renders
+# identically regardless of the viewer's device/browser dark-mode setting.
+[theme]
+base = "light"
+primaryColor = "#c94a1e"
+backgroundColor = "#f5f4f0"
+secondaryBackgroundColor = "#eceae4"
+textColor = "#1c1b18"
+font = "sans serif"
+
+[client]
+showErrorDetails = true

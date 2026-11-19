@@ -43,9 +43,8 @@ capital because its program is winding down.
      to a domestic qualified source, outranking the lifecycle override.
 - **Break-even volume** and a **sensitivity** flag (robust vs. sensitive to a 10%
   buy-quote move) accompany the economics.
-- The scoring engine is fully deterministic. The AI layer only **explains** the
-  recommendation; it never generates one. The engine recommendation is displayed
-  above the narrative so the two can never be confused.
+- The explanation is generated from the engine results. It names the dominant
+  drivers, compares annual costs, and surfaces any active overrides.
 
 ## Run locally
 
@@ -54,8 +53,8 @@ pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
-Set `ANTHROPIC_API_KEY` for an AI-written rationale; otherwise a deterministic
-template is used.
+The app runs without an API key. Use the built-in fictional parts to try
+different cases in the public demo.
 
 ## Tests
 

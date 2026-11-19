@@ -7,7 +7,6 @@ Run locally:  streamlit run app/streamlit_app.py
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -23,21 +22,9 @@ for sub in ("src", "data"):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-# Bridge a Streamlit Cloud secret to the environment. Streamlit secrets land in
-# st.secrets, not os.environ, but the narrative layer reads ANTHROPIC_API_KEY
-# from the environment. This makes the key work when set in the Cloud secrets
-# manager, while locally (no secret, no env var) the deterministic fallback runs.
-try:
-    if "ANTHROPIC_API_KEY" in st.secrets and not os.environ.get("ANTHROPIC_API_KEY"):
-        os.environ["ANTHROPIC_API_KEY"] = st.secrets["ANTHROPIC_API_KEY"]
-except Exception:
-    # st.secrets raises if no secrets file exists at all (common locally). The
-    # deterministic narrative handles the no-key case, so this is safe to ignore.
-    pass
-
 import decision_engine as eng  # noqa: E402
 from decision_engine import PartInput, evaluate, recommendation_sort_key  # noqa: E402
-from ai_narrative import ai_narrative, FACTOR_LABELS  # noqa: E402
+from rationale import deterministic_narrative, FACTOR_LABELS  # noqa: E402
 from sample_parts import SAMPLE_PARTS  # noqa: E402
 
 # --- Design system (consistent with the rest of the suite) -----------------
@@ -278,20 +265,14 @@ with left:
 
 with right:
     st.subheader("Rationale")
-    narrative, used_ai = ai_narrative(result)
     st.markdown(
         f"<div class='mono' style='color:{MUTED};font-size:0.8rem;"
         f"letter-spacing:0.04em'>ENGINE RECOMMENDATION: "
         f"<b style='color:{color}'>{result.recommendation}</b></div>",
         unsafe_allow_html=True,
     )
-    st.write(narrative)
-    st.caption(
-        ("AI-generated explanation of a deterministic recommendation."
-         if used_ai else
-         "Deterministic explanation. (Set ANTHROPIC_API_KEY for an AI-written rationale.)")
-        + " The recommendation above is always computed by the engine, never AI-generated."
-    )
+    st.markdown(deterministic_narrative(result).replace("$", r"\$"))
+    st.caption("The rationale summarizes the calculated scores, economics, and decision rules.")
 
     if st.button("➕ Add to comparison", use_container_width=True):
         if len(st.session_state.comparison) >= 6 and result.part_name not in st.session_state.comparison:

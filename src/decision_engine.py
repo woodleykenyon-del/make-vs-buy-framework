@@ -9,8 +9,7 @@ Design principles (locked):
   higher = favors MAKE, lower = favors BUY, 50 = neutral.
 - The recommendation is derived from a 2x2 quadrant (economic x strategic),
   modified by explicit, visible override flags.
-- No AI in the scoring. An AI narrative layer (separate module) only
-  EXPLAINS the recommendation this engine produces.
+- The rationale module explains the recommendation from the computed result.
 
 Nothing in this module is hidden: every category->score mapping, every
 weight, and every threshold is a named constant so the UI can render the

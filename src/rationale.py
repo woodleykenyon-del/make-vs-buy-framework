@@ -1,17 +1,6 @@
-"""AI narrative layer for the Make vs. Buy Decision Framework.
-
-Hard boundary (locked design principle): this module NEVER produces or alters
-a recommendation. It receives a fully-computed DecisionResult and writes a
-short plain-language rationale that EXPLAINS the deterministic output, naming
-the dominant drivers and any override flags.
-
-If no API key is configured, it falls back to a deterministic template so the
-deployed demo always renders a coherent rationale.
-"""
+"""Deterministic explanations of completed make-or-buy decisions."""
 
 from __future__ import annotations
-
-import os
 
 from decision_engine import (
     DecisionResult,
@@ -69,7 +58,7 @@ def _top_drivers(result: DecisionResult, n: int = 2) -> list[str]:
 
 
 def deterministic_narrative(result: DecisionResult) -> str:
-    """Template rationale used when no API key is available."""
+    """Explain the engine recommendation and its supporting evidence."""
     drivers = _top_drivers(result)
     driver_text = " and ".join(drivers)
     delta = result.annual_cost_delta
@@ -160,59 +149,3 @@ def deterministic_narrative(result: DecisionResult) -> str:
         flag_text = " " + " ".join(result.flags)
 
     return f"{lead} {cost_line} {close}{flag_text}"
-
-
-def _build_prompt(result: DecisionResult) -> str:
-    drivers = _top_drivers(result, n=3)
-    econ = ", ".join(f"{FACTOR_LABELS[k]} {v:.0f}" for k, v in result.economic_factors.items())
-    strat = ", ".join(f"{FACTOR_LABELS[k]} {v:.0f}" for k, v in result.strategic_factors.items())
-    flags = "; ".join(result.flags) if result.flags else "none"
-    return (
-        "You are a sourcing analyst writing a short rationale for a make-vs-buy "
-        "decision that has ALREADY been determined by a deterministic engine. "
-        "Do not change, second-guess, or re-derive the recommendation. Explain it "
-        "in 2-4 sentences of plain, leadership-ready language. State the dominant "
-        "drivers and any constraints. No bullet points, no headers, no em dashes.\n\n"
-        f"Part: {result.part_name}\n"
-        f"Description: {result.description}\n"
-        f"Scoring mode: {result.mode}\n"
-        f"Economic layer score (higher favors Make): {result.economic_score}/100\n"
-        f"Strategic layer score (higher favors Make): {result.strategic_score}/100\n"
-        f"Economic factors: {econ}\n"
-        f"Strategic factors: {strat}\n"
-        f"Annual make cost (loaded): ${result.annual_make_cost:,.0f}\n"
-        f"Annual buy cost: ${result.annual_buy_cost:,.0f}\n"
-        f"Top drivers: {', '.join(drivers)}\n"
-        f"Override flags: {flags}\n"
-        f"FINAL RECOMMENDATION (do not alter): {result.recommendation}\n"
-    )
-
-
-def ai_narrative(result: DecisionResult) -> tuple[str, bool]:
-    """Return (narrative, used_ai). Falls back to deterministic template.
-
-    used_ai is surfaced in the UI so the rationale source is transparent.
-    """
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return deterministic_narrative(result), False
-
-    try:
-        from anthropic import Anthropic
-
-        client = Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=300,
-            messages=[{"role": "user", "content": _build_prompt(result)}],
-        )
-        text = "".join(
-            block.text for block in message.content if getattr(block, "type", None) == "text"
-        ).strip()
-        if not text:
-            return deterministic_narrative(result), False
-        return text, True
-    except Exception:
-        # Any API/network/library failure -> deterministic fallback. The demo
-        # must never break because of the AI layer.
-        return deterministic_narrative(result), False
